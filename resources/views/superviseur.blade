@@ -1,0 +1,10 @@
+@extends('layouts.app')
+
+@section('content')
+    <h1>Tableau de Bord du Superviseur</h1>
+
+    <!-- Lien pour accéder à la page de création de demande -->
+    <a href="{{ route('demandes.create') }}" class="btn btn-primary">Créer une Demande</a>
+
+    <!-- Autres options de gestion pour le superviseur peuvent être ajoutées ici -->
+@endsection

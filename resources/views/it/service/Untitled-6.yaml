@@ -1,0 +1,53 @@
+//---------------------------------------------------- START Kevin 
+- Menu :
+    - Change all icons with fontawesome --> DONE
+
+- Emplacement :
+    - Créer la page ajouter un emplacement   --> DONE
+    - Créer la page d'affichage des emplacement --> DONE
+
+- Fournisseur :
+     - Créer la page ajouter un fournisseur --> DONE
+     - Créer la page liste des fournisseurs --> DONE
+
+- Vlan : 
+    - Créer la page ajouter un vlan --> DONE
+    - Créer la page d'affichage des vlan --> DONE
+
+- Categorie :
+    - Créer la page ajouter une catégorie  --> DONE
+    - Créer la page d'affichage des catégories --> DONE
+         - Créet un bouton pour afficher la liste des sous categorie de cette categorie  (SAUF ça)
+
+- Utilisateur :
+    - Créer la page ajouter un utilisateur --> DONE
+    - Créer la page d'affichage des utilisateurs --> DONE
+
+//---------------------------------------------------- END Kevin
+
+- Sous catégorie :
+    - Créer la page ajouter une sous catégorie et possibilité  de la lié à plusieurs relation (fournissuer , catégorie , marque ....) --> DONE
+    - Afficher la liste des sous catégorie par catégorie
+
+- Equipement : 
+    - Créer la page ajouter un équipement
+    - Créer la page d'affichage des équipements
+    - Créer la page d'affichage d'un equipement 
+
+
+//// 
+Trouve Page modifier equipement avec log
+Trouve Page modifier Utilisateur 
+Voir pour choisir equipement réseau et choix nul 
+
+
+
+
+    A faire : 
+
+    Ajouter Masque dans Table Equipement. 
+    Voir id_attribution
+    Voir Image 
+    verifier valeur dans migration et Maj aussi dans bdd
+    préparer cahier de charge et voir pour automatise intégration inventaire, demande ect 
+    Page DHCP Quand cocher oui ou non 
