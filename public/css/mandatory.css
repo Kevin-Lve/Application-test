@@ -1,0 +1,246 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    background-color: #f0f2f5;
+    overflow: hidden;
+}
+
+/* Container */
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background: #1f2937;
+    color: #ffffff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar.collapsed {
+    width: 80px;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+    color: #10b981;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.toggle-btn {
+    font-size: 20px;
+    background: none;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    top: 20px;
+    right: -40px;
+    background-color: #1f2937;
+    padding: 10px;
+    border-radius: 50%;
+    transition: right 0.3s ease;
+}
+
+.sidebar.collapsed .toggle-btn {
+    right: -20px;
+}
+
+.sidebar ul {
+    list-style: none;
+    width: 100%;
+    margin-top: 30px;
+}
+
+.sidebar ul li {
+    margin-bottom: 20px;
+}
+
+.sidebar ul li a {
+    color: #a1a5b7;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease, padding-left 0.3s ease;
+    border-radius: 8px;
+}
+
+.sidebar ul li a i {
+    margin-right: 10px;
+}
+
+.sidebar ul li a:hover {
+    background-color: #374151;
+    color: #ffffff;
+    padding-left: 15px;
+}
+
+.sidebar.collapsed ul li a {
+    justify-content: center;
+    padding-left: 10px;
+}
+
+.sidebar.collapsed ul li a i {
+    margin: 0;
+}
+
+.sidebar.collapsed ul li a .link-text {
+    display: none;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.header-left .toggle-btn {
+    margin-right: 15px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.search-bar {
+    padding: 10px;
+    margin-right: 20px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    width: 300px;
+    transition: border-color 0.3s ease;
+}
+
+.search-bar:focus {
+    border-color: #0074D9;
+}
+
+.user-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.user-btn {
+    padding: 10px 20px;
+    background-color: #0074D9;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.user-btn:hover {
+    background-color: #005bb5;
+}
+
+.user-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 45px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    z-index: 1;
+    width: 180px;
+}
+
+.user-dropdown.show {
+    display: block;
+}
+
+.user-dropdown a {
+    color: #333;
+    padding: 12px 20px;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.3s ease;
+}
+
+.user-dropdown a:hover {
+    background-color: #f0f2f5;
+}
+
+/* Dashboard Cards */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #3D5A80;
+}
+
+.big-number {
+    font-size: 40px;
+    font-weight: bold;
+    color: #0074D9;
+}
+
+.view-details {
+    padding: 8px 16px;
+    background: #0074D9;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 15px;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+}
+
+.view-details:hover {
+    background-color: #005bb5;
+}

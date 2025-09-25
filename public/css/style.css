@@ -1,0 +1,107 @@
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-image: url(Boxicon/Fond/F2.jpg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+}
+
+.container {
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    padding: 0 15px;
+}
+
+span {
+    color: #fff;
+    font-size: small;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+header {
+    color: #fff;
+    font-size: 30px;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.input-field {
+    position: relative; /* Permet de positionner l'icône et l'input */
+    margin-bottom: 20px;
+}
+
+.input {
+    height: 45px;
+    width: 100%;
+    border: none;
+    outline: none;
+    border-radius: 30px;
+    color: #000;
+    padding-left: 45px; /* Crée un espace pour l'icône */
+    background: rgba(241, 241, 241, 0.6);
+}
+
+.icon {
+    position: absolute;
+    top: 50%;
+    left: 15px; /* Position à gauche */
+    transform: translateY(-50%); /* Centrer l'icône verticalement */
+    width: 20px; /* Taille de l'icône */
+    height: 20px;
+}
+
+::-webkit-input-placeholder {
+    color: #fff;
+}
+
+.submit {
+    border: none;
+    border-radius: 30px;
+    font-size: 15px;
+    height: 45px;
+    outline: none;
+    width: 100%;
+    background: rgba(202, 180, 180, 0.7);
+    cursor: pointer;
+    transition: 0.3s;
+    color: #1d1c1c;
+    font-weight: bold;
+    text-align: center;
+}
+
+.submit:hover {
+    box-shadow: 1px 5px 7px 1px rgba(0, 0, 0, 0.2);
+}
+
+.bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    font-size: small;
+    color: #fff;
+    margin-top: 10px;
+}
+
+.left {
+    display: flex;
+}
+
+label a {
+    color: #fff;
+    text-decoration: none;
+}
