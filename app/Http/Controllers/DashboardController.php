@@ -2,15 +2,79 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Equipement\Equipement;
+use App\Models\Equipement\HistoriqueEquipement;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     // Affichage du tableau de bord principal
     public function show_dashboard()
     {
-        return view("dashboard");
+        $totalEquipements = Equipement::count();
+
+        $statusBreakdown = Equipement::select('id_action', DB::raw('COUNT(*) as total'))
+            ->with('action:id,nom')
+            ->groupBy('id_action')
+            ->orderByDesc('total')
+            ->get();
+
+        $topSousCategories = Equipement::select('id_sous_categorie', DB::raw('COUNT(*) as total'))
+            ->with('sous_categorie:id,nom')
+            ->groupBy('id_sous_categorie')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get();
+
+        $attributionCounts = Equipement::select('type_attribution', DB::raw('COUNT(*) as total'))
+            ->groupBy('type_attribution')
+            ->pluck('total', 'type_attribution');
+
+        $recentLogs = HistoriqueEquipement::with('equipement:id,hostname,numero_serie')
+            ->latest('created_at')
+            ->limit(8)
+            ->get();
+
+        $monthlyEvolution = DB::table('equipement')
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as total")
+            ->whereNotNull('created_at')
+            ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        $chartData = [
+            'statusBreakdown' => $statusBreakdown->map(fn ($row) => [
+                'label' => $row->action->nom ?? 'Non défini',
+                'value' => (int) $row->total,
+            ])->values(),
+            'monthlyEvolution' => $monthlyEvolution->map(fn ($row) => [
+                'label' => $row->month,
+                'value' => (int) $row->total,
+            ])->values(),
+            'categoryTop' => $topSousCategories->map(fn ($row) => [
+                'label' => optional($row->sous_categorie)->nom ?? 'Non défini',
+                'value' => (int) $row->total,
+            ])->values(),
+        ];
+
+        $kpis = [
+            'totalEquipements' => $totalEquipements,
+            'attribuesUtilisateurs' => (int) ($attributionCounts['utilisateur'] ?? 0),
+            'attribuesServices' => (int) ($attributionCounts['service'] ?? 0),
+            'enStock' => (int) ($attributionCounts['stock'] ?? 0),
+        ];
+
+        return view('dashboard', [
+            'kpis' => $kpis,
+            'statusBreakdown' => $statusBreakdown,
+            'topSousCategories' => $topSousCategories,
+            'attributionCounts' => $attributionCounts,
+            'recentLogs' => $recentLogs,
+            'chartData' => $chartData,
+            'totalEquipements' => $totalEquipements,
+        ]);
     }
 
     //****** Vues pour le Superviseur ******

@@ -2,9 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EquipementController;
-
+use App\Http\Controllers\InventoryScanController;
 
 Route::prefix('equipement')->group(function () {
+    Route::get('/scan', [InventoryScanController::class, 'show'])->name('equipement.scan');
+    Route::post('/scan', [InventoryScanController::class, 'search'])->name('equipement.scan.search');
+
     Route::get('/', [EquipementController::class, 'index'])->name('equipement.show.index');
 
     Route::get('/afficher/{id}', [EquipementController::class, 'show_equipement'])->name('it.equipement.show');

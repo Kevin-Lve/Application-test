@@ -2,179 +2,204 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Equipement\StoreEquipementRequest;
+use App\Http\Requests\Equipement\UpdateEquipementRequest;
+use App\Models\ActionMateriel;
 use App\Models\Com\Reseau\Vlan;
+use App\Models\Equipement\Categorie;
 use App\Models\Equipement\Equipement;
 use App\Models\Gestion\Emplacement;
 use App\Models\Gestion\Service;
-use Illuminate\Http\Request;
-use App\Models\Equipement\Sous_Categorie;
 use App\Models\User;
-use App\Models\ActionMateriel;
+use App\Services\Equipement\DynamicAttributeService;
+use App\Services\Equipement\EquipmentHistoryService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class EquipementController extends Controller
 {
+    public function __construct(
+        private readonly DynamicAttributeService $dynamicAttributeService,
+        private readonly EquipmentHistoryService $historyService,
+    ) {
+    }
+
     public function index(Request $request)
     {
-        $search = $request->input('search'); // Récupération du mot-clé de recherche
-        $perPage = $request->input('perPage', 20); // Pagination configurable
-    
+        $search = $request->input('search');
+        $perPage = $request->input('perPage', 20);
+
         $equipements = Equipement::query()
-            ->with(['emplacement', 'sous_categorie', 'vlan','action'])
+            ->with(['emplacement', 'sous_categorie', 'vlan', 'action'])
             ->when($search, function ($query, $search) {
-                $query->where('numero_serie', 'like', "%{$search}%") // Recherche par numéro de série
-                      ->orWhere('adresse_ip', 'like', "%{$search}%") // Recherche par adresse IP
-                      ->orWhere('adresse_mac', 'like', "%{$search}%") // Recherche par adresse MAC
-                      ->orWhereHas('sous_categorie', function ($q) use ($search) {
-                          $q->where('nom', 'like', "%{$search}%"); // Recherche par sous-catégorie
-                      })
-                      ->orWhereHas('emplacement', function ($q) use ($search) {
-                          $q->where('nom', 'like', "%{$search}%"); // Recherche par emplacement
-                      });
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('numero_serie', 'like', "%{$search}%")
+                        ->orWhere('hostname', 'like', "%{$search}%")
+                        ->orWhere('adresse_ip', 'like', "%{$search}%")
+                        ->orWhere('adresse_mac', 'like', "%{$search}%");
+                })
+                    ->orWhereHas('sous_categorie', fn ($q) => $q->where('nom', 'like', "%{$search}%"))
+                    ->orWhereHas('emplacement', fn ($q) => $q->where('nom', 'like', "%{$search}%"));
             })
-            ->paginate($perPage);
-    
+            ->latest('created_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return view('it.equipement.index', [
             'equipements' => $equipements,
-            'search' => $search, // Pour conserver la valeur saisie dans le champ
+            'search' => $search,
         ]);
     }
-    
 
-    public function create_show()
+    public function create_show(Request $request)
     {
-        $emplacements = Emplacement::all();
-        $sous_categories = Sous_Categorie::all();
-        $users = User::all();
-        $vlans = Vlan::all();
-        $services = Service::all();
-        $actions = ActionMateriel::all();
+        $categories = Categorie::with('sousCategories')->orderBy('nom')->get();
+        $selectedCategoryId = $request->old('id_categorie') ?? $categories->first()?->id;
+        $selectedSousCategorieId = $request->old('id_sous_categorie');
+
+        if (!$selectedSousCategorieId && $selectedCategoryId) {
+            $selectedSousCategorieId = $categories
+                ->firstWhere('id', $selectedCategoryId)?
+                ->sousCategories
+                ->first()
+                ?->id;
+        }
+
+        $selectedService = $request->old('id_service') ? Service::find($request->old('id_service')) : null;
+        $selectedUser = $request->old('id_utilisateur') ? User::find($request->old('id_utilisateur')) : null;
 
         return view('it.equipement.ajoute', [
-            'emplacements' => $emplacements,
-            'sous_categories' => $sous_categories,
-            'vlans' => $vlans,
-            'users' => $users,
-            'services' => $services,
-            
-            'actions' => $actions
+            'categories' => $categories,
+            'emplacements' => Emplacement::orderBy('nom')->get(),
+            'vlans' => Vlan::orderBy('nom')->get(),
+            'actions' => ActionMateriel::orderBy('nom')->get(),
+            'selectedCategoryId' => $selectedCategoryId,
+            'selectedSousCategorieId' => $selectedSousCategorieId,
+            'selectedServiceId' => $selectedService?->id,
+            'selectedServiceLabel' => $selectedService?->nom,
+            'selectedUserId' => $selectedUser?->id,
+            'selectedUserLabel' => $selectedUser ? trim($selectedUser->prenom . ' ' . $selectedUser->nom) : null,
         ]);
     }
 
-    public function create_equipement(Request $request)
+    public function create_equipement(StoreEquipementRequest $request)
     {
+        $equipement = DB::transaction(function () use ($request) {
+            $equipement = Equipement::create($request->toEquipmentData());
+            $equipement->load('attributsValeurs');
 
-        // Déterminer l'attribution (Service ou Utilisateur)
-        $id_attribution = null;
-        if ($request->type_attribution === 'service') {
-            $id_attribution = $request->id_service;
-        } elseif ($request->type_attribution === 'utilisateur') {
-            $id_attribution = $request->id_utilisateur;
-        }
+            $attributeChanges = $this->dynamicAttributeService->sync($equipement, $request->dynamicAttributes());
 
-        // Vérifier si l'équipement est un équipement réseau
-        $isNetworkEquipment = $request->input('equipement_reseau') === 'oui';
+            $this->historyService->logCreation(
+                $equipement,
+                Auth::id(),
+                $attributeChanges,
+                $request->commentaire()
+            );
 
-        $equipement = Equipement::create([
-            'id_sous_categorie' => $request->id_sous_categorie,
-            'hostname' => $request->hostname,
-            'numero_serie' => $request->sn,
-            'prix' => $request->prix,
-            'date_achat' => $request->date_achat,
-            'date_obsolescence' => $request->date_obsolescence,
-            'date_livraison' => $request->date_livraison,
-            'description' => $request->description,
-            'type_attribution' => $request->type_attribution,
-            'id_attribution' => $id_attribution,
-            'id_emplacement' => $request->id_emplacement,
-            'id_vlan' => $isNetworkEquipment ? $request->id_vlan : null,
-            'adresse_ip' => $isNetworkEquipment ? $request->adresse_ip : null,
-            'adresse_mac' => $isNetworkEquipment ? $request->adresse_mac : null,
-            'numero_sku' => $request->numero_sku,
-            'numero_tel' => $request->numero_tel,
-            'immo' => $request->immo,
-            'imei' => $request->imei,
-            'numero_ligne' => $request->numero_ligne,
-            'code_pin' => $request->code_pin,
-            'code_puk' => $request->code_puk,
-            'forfait' => $request->forfait,
-            'type_sim' => $request->type_sim,
-            'esim' => $request->esim ? 1 : 0,
-            'id_equipement_parent' => $request->id_equipement_parent,
-            'id_action' => $request->id_action,
-        ]);
+            return $equipement;
+        });
 
-        return redirect()->route('it.equipement.show', ['id' => $equipement->id]);
+        return redirect()->route('it.equipement.show', ['id' => $equipement->id])
+            ->with('success', "Équipement créé avec succès.");
     }
 
-
-    //Redirection vers id equipement -> adresse mac (view)
-    public function show_equipement($id )
+    public function show_equipement($id)
     {
-        $equipement = Equipement::where('id', $id)->with('sous_categorie.fournisseur','sous_categorie.categorie','action')->first();
-        // dd($equipement);
-        //dd($equipement->toRawSql()); ="select * from `equipement` where `id` = '1's
-        return view("it/equipement/afficher",[
-            'equipement' => $equipement
+        $equipement = Equipement::with(['sous_categorie.categorie', 'sous_categorie.attributs', 'action', 'historiques'])
+            ->findOrFail($id);
+
+        return view('it.equipement.afficher', [
+            'equipement' => $equipement,
         ]);
     }
 
-    //Supprimer équipemement 
     public function supprimer_equipement($id)
     {
-        $equipement=Equipement::findOrFail($id); // Récuperer equipement à supprimer 
-        $equipement->delete(); //Supprimer equipement
-        return redirect()->route('equipement.show.index');//->with('success', 'Equipement suprrimé avec succès.');
+        $equipement = Equipement::findOrFail($id);
+        $equipement->delete();
+
+        return redirect()->route('equipement.show.index')
+            ->with('success', "Équipement supprimé avec succès.");
     }
 
-    public function edit_show($id)
+    public function edit_show($id, Request $request)
     {
-        $emplacements = Emplacement::all();
-        $sous_categories = Sous_Categorie::all();
-        $users = User::all();
-        $vlans = Vlan::all();
-        $services = Service::all();
-        $equipement = Equipement::where('id', $id)->first();
+        $equipement = Equipement::with(['attributsValeurs', 'sous_categorie'])->findOrFail($id);
 
-        return view('it.equipement.modifier', [
-            'emplacements' => $emplacements,
-            'sous_categories' => $sous_categories,
-            'vlans' => $vlans,
-            'users' => $users,
-            'services' => $services,
-            'equipement' => $equipement
-        ]);
-    }
+        $categories = Categorie::with('sousCategories')->orderBy('nom')->get();
+        $selectedCategoryId = $request->old('id_categorie') ?? $equipement->sous_categorie?->id_categorie;
+        $selectedSousCategorieId = $request->old('id_sous_categorie') ?? $equipement->id_sous_categorie;
 
-    public function edit($id, Request $request)
-    {
-        $id_attribution = null;
-        if ($request->type_attribution === 'service') {
-            $id_attribution = $request->id_service;
-        } elseif ($request->type_attribution === 'utilisateur') {
-            $id_attribution = $request->id_utilisateur;
+        if (!$selectedSousCategorieId && $selectedCategoryId) {
+            $selectedSousCategorieId = $categories
+                ->firstWhere('id', $selectedCategoryId)?
+                ->sousCategories
+                ->first()
+                ?->id;
         }
 
-        // Vérifier si l'équipement est un équipement réseau
-        $isNetworkEquipment = $request->input('equipement_reseau') === 'oui';
+        $selectedService = $request->old('id_service')
+            ? Service::find($request->old('id_service'))
+            : ($equipement->type_attribution === 'service' && $equipement->id_attribution
+                ? Service::find($equipement->id_attribution)
+                : null);
 
-        Equipement::where('id', $id)->update([
-            'id_sous_categorie' => $request->id_sous_categorie,
-            'numero_serie' => $request->sn,
-            'prix' => $request->prix,
-            'date_achat' => $request->date_achat,
-            'date_obsolescence' => $request->date_obsolescence,
-            'description' => $request->description,
-            'type_attribution' => $request->type_attribution,
-            'id_attribution' => $id_attribution,
-            'id_emplacement' => $request->id_emplacement,
-            'id_vlan' => $isNetworkEquipment ? $request->id_vlan : null, // Réinitialisation si non réseau
-            'adresse_ip' => $isNetworkEquipment ? $request->adresse_ip : null, // Réinitialisation si non réseau
-            'adresse_mac' => $isNetworkEquipment ? $request->adresse_mac : null, // Réinitialisation si non réseau
+        $selectedUser = $request->old('id_utilisateur')
+            ? User::find($request->old('id_utilisateur'))
+            : ($equipement->type_attribution === 'utilisateur' && $equipement->id_attribution
+                ? User::find($equipement->id_attribution)
+                : null);
+
+        $existingAttributes = $equipement->attributsValeurs
+            ->mapWithKeys(fn ($valeur) => [$valeur->id_attribut => $valeur->valeur])
+            ->toArray();
+
+        return view('it.equipement.modifier', [
+            'categories' => $categories,
+            'emplacements' => Emplacement::orderBy('nom')->get(),
+            'vlans' => Vlan::orderBy('nom')->get(),
+            'actions' => ActionMateriel::orderBy('nom')->get(),
+            'equipement' => $equipement,
+            'selectedCategoryId' => $selectedCategoryId,
+            'selectedSousCategorieId' => $selectedSousCategorieId,
+            'selectedServiceId' => $selectedService?->id,
+            'selectedServiceLabel' => $selectedService?->nom,
+            'selectedUserId' => $selectedUser?->id,
+            'selectedUserLabel' => $selectedUser ? trim($selectedUser->prenom . ' ' . $selectedUser->nom) : null,
+            'existingAttributeValues' => $existingAttributes,
         ]);
-
-        return redirect()->route('it.equipement.show', ['id' => $id]);
     }
 
-    
-}
+    public function edit($id, UpdateEquipementRequest $request)
+    {
+        $equipement = Equipement::with('attributsValeurs')->findOrFail($id);
 
+        DB::transaction(function () use ($equipement, $request) {
+            $before = $equipement->getAttributes();
+            $payload = $request->toEquipmentData();
+
+            $equipement->fill($payload);
+            if ($equipement->isDirty()) {
+                $equipement->save();
+            }
+
+            $equipement->load('attributsValeurs');
+            $attributeChanges = $this->dynamicAttributeService->sync($equipement, $request->dynamicAttributes());
+
+            $fieldChanges = $this->historyService->buildFieldChanges($equipement, $before, $payload);
+
+            $this->historyService->logUpdate(
+                $equipement,
+                Auth::id(),
+                $fieldChanges,
+                $attributeChanges,
+                $request->commentaire()
+            );
+        });
+
+        return redirect()->route('it.equipement.show', ['id' => $equipement->id])
+            ->with('success', "Équipement mis à jour avec succès.");
+    }
+}

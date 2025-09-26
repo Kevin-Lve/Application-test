@@ -3,8 +3,9 @@
 namespace App\Models\Equipement;
 
 use App\Models\Fournisseur;
-use App\Models\Equipement\Categorie;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sous_Categorie extends Model
 {
@@ -12,13 +13,18 @@ class Sous_Categorie extends Model
 
     protected $guarded = [];
 
-    public function fournisseur()
+    public function fournisseur(): BelongsTo
     {
-        return $this->hasOne(Fournisseur::class, 'id', 'id_fournisseur');
+        return $this->belongsTo(Fournisseur::class, 'id_fournisseur');
     }
 
-    public function categorie(){
+    public function categorie(): BelongsTo
+    {
+        return $this->belongsTo(Categorie::class, 'id_categorie');
+    }
 
-        return $this->hasOne(Categorie::class,'id', 'id_categorie');
+    public function attributs(): HasMany
+    {
+        return $this->hasMany(SousCategorieAttribut::class, 'id_sous_categorie');
     }
 }
